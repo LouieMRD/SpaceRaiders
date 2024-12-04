@@ -1,0 +1,181 @@
+*{
+    font-family: "Tiny5", sans-serif;
+    text-decoration: none;
+    color: black;
+    background-color: white;
+}
+
+.easy_reader{
+    font-family: Arial, serif;
+    font-weight: 700;
+}
+
+.material-symbols-outlined {
+    margin-left: 10px;
+    color: #575757;
+    transition: 0.2s;
+}
+
+.material-symbols-outlined:hover{
+    cursor: pointer;
+    transition: 0.2s;
+    color: black;
+}
+
+.container{
+        text-align: center;
+    align-items: center;
+    margin: auto;
+    display: block;
+    width: 80%;
+
+}
+
+canvas{
+    width: 75%;
+    border: black 1px solid;
+    border-radius: 3px;
+    margin-bottom: 50px;
+}
+
+ul{
+    font-size: 20px;
+}
+
+input{
+    padding: 10px;
+    align-items: center;
+    margin: 3px;
+    color: white;
+    border-radius: 4px;
+    border-color: grey;
+}
+
+input[type=button]{
+    margin-bottom: 15px;
+    padding: 12px;
+}
+
+input[type=button]:hover{
+    transform: translateY(4px);
+    transition: 0.2s;
+}
+
+input[type=button]:active{
+    translate: 0 4px;
+    transition: 0.1s;
+}
+
+#show_board{
+    border-style: none;
+    background-color: #0e9aa7;
+    box-shadow: 0 7px #0a6770;
+    transition: 0.3s;
+}
+
+
+#start_but{
+    border-style: none;
+    background-color: #f44242;
+    box-shadow: 0 7px #b73434;
+    transition: 0.3s;
+}
+
+#start_but:hover{
+    box-shadow: 0 4px #b73434;
+    transition: 0.2s;
+}
+
+#start_but:active{
+    box-shadow: 0 1px #b73434;
+}
+
+#show_board:hover{
+    box-shadow: 0 4px #0a6770;
+    transition: 0.2s;
+}
+
+#show_board:active{
+    box-shadow: 0 1px #0a6770;
+
+}
+
+#start_but:active{
+    box-shadow: 0 1px #968a72;
+}
+
+#stop_but{
+    border-style: none;
+    background-color:  	#fba257;
+    box-shadow: 0 7px #c47f45;
+    transition: 0.3s;
+}
+
+#stop_but:hover{
+    box-shadow: 0 4px #c47f45;
+    transition: 0.2s;
+}
+
+#stop_but:active{
+    box-shadow: 0 1px #c47f45;
+}
+
+input[type=submit], input[type=text]{
+    border-style: none;
+    background-color: #4874bf;
+    box-shadow: 0 7px #375993;
+    transition: 0.3s;
+}
+
+input[type=text]:hover, input[type=submit]:hover{
+    box-shadow: 0 4px #375993;
+    transform: translateY(4px);
+    transition: 0.2s;
+}
+
+input[type=text]:active, input[type=submit]:active{
+    outline: none;
+    translate: 0 4px;
+    transition: 0.1s;
+    box-shadow: 0 1px #375993;
+}
+
+input[type=text]:focus{
+    outline: none;
+}
+
+table{
+    display: none;
+    margin: auto;
+    padding: 9px;
+    width: 40%;
+    border: 2px solid;
+}
+
+ td, th {
+     width: 100%;
+    border: 1px solid #ddd;
+     border-radius: 3px;
+     padding: 9px;
+     text-align: left;
+}
+
+
+ th {
+    padding-top: 3px;
+     text-align: left;
+    background-color: #e8e8e8;
+    color: #606060;
+}
+
+
+
+
+
+
+
+
+
+
+
+

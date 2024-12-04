@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8">
+	<title>Space Raiders</title>
+	<link rel="stylesheet" href="styles.css">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Tiny5&display=swap"
+		  rel="stylesheet">
+	<link href="leaderboard.js">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=settings_accessibility" />
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+</head>
+<body onload="leaderboard_namespace.display_leaderboard()" >
+
+<div class="container">
+	<h1>Space Raiders<a onclick="easy_reading()"> <span class="material-symbols-outlined">
+settings_accessibility
+</span></a></h1>
+
+	<div class="game_controls">
+		<form id="Game_Controls">
+			<input type="button" value="Start game" id="start_but" onclick="falling_stuff_namespace.start_game()">
+			<input type="button" value="Stop game" id="stop_but" onclick="falling_stuff_namespace.stop_game()">
+			<input type="button" value="Leaderboard" id="show_board" onclick="show_leaderboard()">
+		</form>
+	</div>
+
+	<table id="leaderboard">
+		<thead><tr><th>Name</th><th>Score</th></tr></thead>
+		<tbody id="top_scores"></tbody>
+	</table>
+
+	<p id="response"></p>
+
+
+	<form method="post" id="user_data" onsubmit="stop_submit(event)">
+		<input type="text" id="name" placeholder="name" required>
+		<input type="submit" value="Submit" >
+	</form>
+
+	<p>Name: <span id="test">No player name entered</span></p>
+	<p>Score: <span id="score">0</span>  Level: <span id="level">0</span></p>
+
+	<canvas id="game_canvas" width="1200" height="650"></canvas>
+
+</div>
+
+<script>
+
+	/*
+    global variables because they are accessed throughout multiple functions and
+    are used altered in different scopes
+     */
+	let name = "";
+	let score = 0;
+	let startGame = false;
+	let level = 1;
+
+	function show_leaderboard(){
+		$("table").slideToggle("slow", "swing");
+	}
+
+	/*
+	Function used to toggle the text to make it easier to read
+	for some reason have to toggle the css class for each element (does't work by just selecting body)
+	 */
+	function easy_reading(){
+		$("h1").toggleClass("easy_reader");
+		$("input").toggleClass("easy_reader");
+		$("p").toggleClass("easy_reader");
+		$("span").toggleClass("easy_reader");
+		$("th").toggleClass("easy_reader")
+		$("tbody").toggleClass("easy_reader");
+
+	}
+
+	function stop_submit(event) {
+		event.preventDefault();
+		name = document.getElementById("name").value;
+		document.getElementById("test").textContent = name;
+		falling_stuff_namespace.display_name();
+		console.log(name);
+	}
+
+	//toggle the CSS class that displays the table with the property none
+	function table_toggle(){
+		const element = document.getElementById("leaderboard");
+		element.classList.toggle("dispaly_table");
+	}
+
+
+	// Edel Sherratt, 2022
+	// Minor updates to use lets and simplifying x move position calculation. Chris Loftus, 2024
+	const falling_stuff_namespace = function () { // use a function to hide all the identifiers except start_game and stop_game
+
+		//function Score(){
+		//  leaderboard_namespace.save_score(score)
+		//}
+
+		function welcome() {
+			ctx.clearRect(0, 0, canv.width, canv.height);
+			ctx.font = "80px Tiny5, sans-serif";
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+			ctx.fillStyle = "#f44242";
+			ctx.padding = "20px"
+
+			ctx.fillText("Space Raiders", canv.width / 2, canv.height / 2);
+		}
+
+		function display_name() {
+			/*
+            clears the space below the title (drawn by welcome function) so when the name form is
+            submitted the new text (with the name) isn't drawn on top of the original text
+             */
+			ctx.clearRect(0, canv.height / 2 + 40, canv.width, 100);
+
+			ctx.font = "40px Tiny5, sans-serif";
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+			ctx.fillStyle = "#ec8585";
+			ctx.fillText("Hello " + name + ", I hope you enjoy the game!", canv.width / 2, canv.height / 2 + 60);
+		}
+
+		function game_over() {
+			ctx.clearRect(0, 0, canv.width, canv.height);
+			ctx.font = "80px Tiny5, sans-serif";
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+			ctx.fillStyle = "#f44242";
+			ctx.fillText("GAME OVER!", canv.width / 2, canv.height / 2);
+
+			ctx.font = "40px Tiny5, sans-serif"
+			ctx.fillText("Score: " + score, canv.width / 2, canv.height / 2 + 60);
+
+		}
+
+
+		/* a canvas and a canvas context to let us draw stuff */
+		const canv = document.getElementById("game_canvas");
+		const ctx = canv.getContext("2d");
+		const canv_bounding_box = canv.getBoundingClientRect();
+
+		/* event listener calls move when the canvas is clicked */
+		canv.addEventListener("mousemove", move, false);
+		canv.addEventListener("click", fire, false);
+
+
+		function increase_score(new_score) {
+			document.getElementById("score").textContent = new_score;
+		}
+
+
+		// a constructor for a box class
+		function Box(x, y, width, height, colour) {
+			this.x = x;
+			this.y = y;
+			this.width = width;
+			this.height = height;
+			this.colour = colour;  // default is a black box
+			this.draw = function (ctx) { // a method
+				ctx.save();
+				ctx.fillStyle = this.colour;
+				ctx.fillRect(this.x, this.y, this.width, this.height);
+				ctx.restore();
+			}
+		}
+
+		let me = new Box(canv.width / 2, canv.height - 30, 30, 20, "#fba257");
+
+		/* move calculates a new x position for the player */
+		function move(e) {
+			e.preventDefault();
+			me.x = (e.clientX - (canv_bounding_box.left + (canv_bounding_box.width - canv.width) / 2));
+			me.x = (e.clientX - canv_bounding_box.left);// *
+			(canv.width / canv_bounding_box.width);
+
+		}
+
+		let the_key;
+
+		function left_key() {
+			if (me.x > 0)
+				me.x -= 5;
+		}
+
+		function right_key() {
+			if (me.x + me.width < canv.width) {
+				me.x += 5;
+			}
+		}
+
+		document.onkeydown = function (event) {
+			if (event != null) {
+				the_key = event.key.toLowerCase();
+
+				switch (the_key) {
+					case "a":
+						left_key();
+						break;
+					case "d":
+						right_key();
+						break;
+					case "ArrowLeft":
+						left_key();
+						break;
+					case "ArrowRight":
+						right_key();
+						break;
+					case "f":
+						fire(event);
+						break;
+					default:
+						break;
+
+				}
+			}
+		}
+
+
+		/* fire adds a new falling box to the list of falling_boxes */
+
+		/* a negative dy value makes the falling_box go up */
+		function fire(e) {
+			e.preventDefault();
+			/*
+                shot is created at x + 14 so it looks like it comes from the centre
+                shot is created at y - 30 so you can't just keep shooting everything infront of you and
+                get a really high score
+             */
+			the_shot.push(new Shot(me.x + 14, me.y - 30, 10, 5, 4, "#ff3036"));
+		}
+
+		function was_i_hit(some_falling_box) {
+
+			if (
+					(some_falling_box.left > (me.x + me.width))
+					|| (some_falling_box.right < me.x)
+					|| (some_falling_box.top > (me.y + me.height))
+					|| (some_falling_box.bottom < me.y)
+			) {
+				// do nothing, the box missed me
+			} else {
+				//if you hit a good box - increase the score by 50 each loop you touch it
+				if(some_falling_box.good_box){
+
+					/*
+                    Way of picking powerup - if the random number generator generates a number above 0.5
+                    increase the score.
+                    Else - freeze the currently spawned blocks
+                     */
+					let rand_power = Math.random();
+					if (rand_power > 0.4){
+						let index;
+						index = the_falling_boxes.falling_boxes.indexOf(some_falling_box);
+						if (index > -1){
+							the_falling_boxes.falling_boxes.splice(index, 1);
+						}
+						increase_score(score += 50);
+						console.log("score increase");
+						//changes the shot attributes to make it bigger
+						the_shot.push(new Shot(me.x - 200, me.y - 30, 10, 10, 400, "#ff3036", true));
+					}
+
+					if(rand_power < 0.4){
+						console.log("freeze!")
+
+						/*
+                        alters the freeze attribute of the falling box object and stops updating its position
+                        has to be called in a function to pass the box attribute into it so it can be frozen
+                         */
+						the_falling_boxes.falling_boxes.forEach(function (box){
+							box.freeze = true;
+						})
+
+						//removes box when it touches player
+						let index;
+						index = the_falling_boxes.falling_boxes.indexOf(some_falling_box);
+						if (index > -1){
+							the_falling_boxes.falling_boxes.splice(index, 1);
+						}
+
+						/*
+                        a timeout is set on the unnamed function which gets the boxes from the falling_boxes array
+                        and sets their freeze boolean value back to false after a delay of 1000 milliseconds (1 second)
+                        */
+						setTimeout(function(){
+							the_falling_boxes.falling_boxes.forEach(function (box){
+								box.freeze = false;
+							});
+						}, 3000);
+
+
+					}
+
+				} else {
+
+					//removes box when it touches player
+					let index;
+					index = the_falling_boxes.falling_boxes.indexOf(some_falling_box);
+					if (index > -1){
+						the_falling_boxes.falling_boxes.splice(index, 1);
+					}
+
+					// a kind of reducing health - you could change this to deal with good boxes
+					me.height -= 0.4 * some_falling_box.mass * some_falling_box.dy;
+					if (me.height < 0) {
+
+						//save and submit the score when the player's health reaches 0
+						leaderboard_namespace.save_score(score);
+
+						//health/size reached zero - reset everything and display a game over screen
+						stop_game();
+						clearInterval(game_interval);
+						game_over();
+						me.reset();
+
+					}
+
+				}
+			}
+		}
+
+		function was_box_hit(some_falling_box, Shot) {
+			// console.log(Shot.top, Shot.bottom, Shot.left, Shot.right);
+			// console.log(some_falling_box.top, some_falling_box.bottom, some_falling_box.left, some_falling_box.right);
+			if (
+					Shot.right < some_falling_box.left ||
+					Shot.left > some_falling_box.right ||
+					Shot.bottom < some_falling_box.top ||
+					Shot.top > some_falling_box.bottom
+			) {
+				//console.log("didnt hit"); //for debugging collision
+				return false;
+				//didnt hit
+			} else {
+				//console.log("hit");//for debugging collision
+				return true;
+			}
+		}
+
+
+		/* constructor for creating new falling boxes
+            good box for deciding if a Powerup style item is spawned
+         */
+		function Falling_box(x, y, dy, mass, colour, good_box = false) {
+			this.x = x;
+			this.y = y;
+			this.dy = dy;
+			this.mass = mass;
+			this.colour = colour;
+			this.good_box = good_box;
+			this.freeze = false;
+
+			this.height = 4 * this.mass;
+			this.width = 6 * this.mass;
+			this.top = this.y;
+			this.bottom = this.y + this.height;
+			this.left = this.x;
+			this.right = this.x + this.width;
+
+			this.update_position = function () {
+				//added more accurate position tracking - better for shot detection
+				if (!this.freeze){
+					this.y += dy;
+					this.top = this.y;
+					this.bottom = this.y + this.height;
+					this.left = this.x;
+					this.right = this.x + this.width;
+				}
+			};
+
+			this.draw = function (context) {
+				let save_fillStyle = context.fillStyle;
+				context.fillStyle = this.colour
+				context.fillRect(
+						this.x, this.y,
+						this.width, this.height);
+				context.fillStyle = save_fillStyle
+			};
+
+
+			this.explode = function (explosion_colour) {
+				this.height += this.mass * this.dy;
+				this.width += this.mass * this.dy;
+				this.colour = explosion_colour;
+				this.dy = 0;
+			}
+		}
+
+		function difficulty_increase(score){
+			if (score  >= level * 1500){ //increase difficulty every 1500 points
+				level++;
+				console.log("difficulty increase");
+				box_speed_increase += 0.05;
+				box_spawn_rate += 0.1;
+				document.getElementById('level').textContent = level.toString();
+
+				return true;
+			}
+			return false;
+		}
+
+		function reset_game() {
+			//reset player position and size/health
+			me.x = canv.width / 2;
+			me.y = canv.height - 30;
+			me.width = 30;
+			me.height = 20;
+
+			//reset level and difficulty
+			level = 0;
+			box_speed_increase = 1;
+			box_spawn_rate = 0.4;
+
+			//clear the falling boxes array
+			the_falling_boxes.falling_boxes = [];
+
+			//clear the shot array
+			the_shot  = [];
+
+			//reset level
+			level = 0;
+
+			//reset difficulty
+			box_spawn_rate = 0.4;
+			box_speed_increase = 1;
+		}
+
+		//global properties to increase the difficulty of the game based on the score/level
+		let box_speed_increase = 1;
+		let box_spawn_rate = 0.4;
+
+
+		let the_falling_boxes = { // an object with an array of boxes and two functions to add boxes to the array
+
+			/* an empty array to store falling_boxes */
+			falling_boxes: [],
+
+			/* create a falling_box and add it to the array of falling_boxes */
+			add_random_falling_box: function () {
+
+				let x = Math.random() * canv.width;
+				let y = Math.random() * (canv.height / 2);
+				let dy = (Math.random() * 3 + 1) * box_speed_increase; //multiple speed by box speed increase
+				let mass = (Math.random() * 5) + 1;
+
+				/*
+                If the .random function generates a number below 0.1 (10% chance) then a good box is spawned
+                because the boolean expression changes to true and a new 'good box' is pushed
+                as a result of this.
+                 */
+				let good_box = Math.random() < 0.1;
+				let colour;
+
+				if (good_box === true) {
+					colour = "#fba257";
+				} else {
+					colour = "#f44242";
+				}
+
+				this.falling_boxes.push(new Falling_box(x, y, dy, mass, colour, good_box));
+
+			},
+
+			maybe_add_random_falling_box: function (how_likely) {
+				let maybe = Math.random();
+				if (maybe < how_likely) {
+					this.add_random_falling_box();
+				}
+			}
+
+		}
+
+		//empty array for the shots to be stored in
+		let the_shot = [];
+
+		//constructor for the shots
+		function Shot(x, y, dy, height = 5, width = 3, colour, power_up = false) {
+			this.x = x;
+			this.y = y;
+			this.dy = dy;
+			this.colour = colour;
+			this.power = power_up;
+
+			this.height = height;
+			this.width = width;
+			this.top = this.y;
+			this.bottom = this.y + this.height;
+			this.left = this.x;
+			this.right = this.x + this.width;
+
+			this.update_position = function () {
+				this.y -= dy;
+				this.top = this.y;
+				this.bottom = this.y + this.height;
+			};
+
+			this.draw = function (context) {
+				let save_fillStyle = context.fillStyle;
+				context.fillStyle = this.colour
+				context.fillRect(
+						this.x, this.y,
+						this.width, this.height);
+				context.fillStyle = save_fillStyle
+			};
+
+		}
+
+		let game_interval;
+
+		function draw_everything() {
+			/* first thing to do each frame is clear the canvas */
+			ctx.clearRect(0, 0, canv.width, canv.height);
+
+			/* and draw the player */
+			me.draw(ctx);
+
+			/* and draw all the falling_boxes */
+			for (let i = 0; i < the_falling_boxes.falling_boxes.length; i++) {
+				the_falling_boxes.falling_boxes[i].draw(ctx);
+			}
+
+			//drawing the shots
+			for (let i = 0; i < the_shot.length; i++) {
+				the_shot[i].draw(ctx);
+			}
+
+
+		}
+
+		function game_loop() {
+
+			while (!startGame) {
+				welcome();
+				display_name();
+
+			}
+
+			if (startGame) {
+				/* update falling_box positions and remove falling_boxes that have gone off the canvas */
+				/* randomly add some new falling boxes */
+
+				the_falling_boxes.maybe_add_random_falling_box(box_spawn_rate); //box spawn rate increase each level
+
+				//increase score every loop
+				increase_score(score += 1);
+
+				//checks for difficulty increase - if true increase spawn rate
+				if (difficulty_increase(score)){
+					console.log("INCREASED DIFFICULTY");
+				}
+
+				for (let i = 0; i < the_falling_boxes.falling_boxes.length; i++) {
+					the_falling_boxes.falling_boxes[i].update_position();
+
+
+					if ((the_falling_boxes.falling_boxes[i].dy === 0)
+							|| (the_falling_boxes.falling_boxes[i].y > canv.height)
+					) {
+						the_falling_boxes.falling_boxes.splice(i, 1);
+					}
+				}
+
+
+				//update shot position every game loop
+				for (let j = 0; j < the_shot.length; j++) {
+					the_shot[j].update_position();
+
+					//if the shot reaches the max height of the canvas - delete it
+					if ((the_shot[j].y < 0)
+							|| (the_shot[j].y > canv.height)) {
+						the_shot.splice(j, 1);
+					}
+				}
+
+				for (let i2 = 0; i2 < the_falling_boxes.falling_boxes.length; i2++) {
+					was_i_hit(the_falling_boxes.falling_boxes[i2]);
+				}
+
+				//if was_i_hit triggers - remove health appropriate to its size and mass
+				//if was_box_hit triggers - remove bullet and the box that was shot
+				for (let i2 = 0; i2 < the_falling_boxes.falling_boxes.length; i2++) {
+					for (let j2 = 0; j2 < the_shot.length; j2++) {
+						was_i_hit(the_falling_boxes.falling_boxes[i2]);
+						if (was_box_hit(the_shot[j2], the_falling_boxes.falling_boxes[i2]) === true) {
+							increase_score(score += 100);//big score increase - player rewarded for not just staying alive
+							the_falling_boxes.falling_boxes.splice(i2, 1);
+
+							/*
+                                if the shot isn't a powerup shot it gets removed when it hits a bad box
+                                if the powerup is active it isn't spliced until it reaches the top of the canvas
+                             */
+							if(the_shot[j2].power === false) {
+								the_shot.splice(j2, 1);
+							}
+
+
+							break;
+						}
+					}
+
+				}
+
+				draw_everything();
+			}
+		}
+
+
+		function start_game() {
+			//change score back to 0 when game is started again
+			score = 0;
+			increase_score(score);
+
+
+			game_interval = setInterval(game_loop, 50)
+			startGame = true; //puts you into the "else" of the if statement (the part with all the game code in it)
+		}
+
+		/* stop updating and re-drawing the screen */
+		function stop_game() {
+			clearInterval(game_interval);
+			game_over(); //display game over message
+			reset_game(); //reset everything after - reset game after score is displayed in game over message
+			welcome();
+			display_name();
+
+
+		}
+
+		welcome();
+		display_name();
+
+
+		return { // an object with two attributes, start_game whose value is the function (method) start_game() and stop_game whose value is stop_game()
+			start_game: start_game,
+			stop_game: stop_game,
+			display_name: display_name
+		}
+	}() // execute the anonymous function in order to return the object with attributes start_game and stop_game, which is assigned to falling_stuff_namespace
+
+
+	const leaderboard_namespace = function () {
+		//CS25320 leaderboard demo © 2022 by Edel Sherratt is licensed under CC BY-NC-SA 4.0
+		// this keeps some names private, like the_leaderboard, and create_leaderboard_row,
+		// while making others visible by returning them as components of an object
+
+		// an empty leaderboard
+		let the_leaderboard = {names_scores:[], max_entries:6};
+		async function save_score(score) {
+
+			const name = document.getElementById("name").value;
+			console.log(name);
+
+			// Use the JavaScript fetch() method to run the php program on the server
+			// Using GET to make it easier to send score, which isn't in a form.
+			const response = await fetch(`../php/save_score.php?name=${name}&score=${score}`, {
+				method: 'GET'
+			})
+
+			if (response.ok) {
+
+				document.getElementById("response").innerHTML= `You scored ${score}.`
+
+				// refresh the leaderboard if the leaderboard is not full, or if the
+				// new score is greater than the lowest score on the leaderboard,
+
+				if (the_leaderboard.names_scores.length < the_leaderboard.max_entries) {
+					display_leaderboard()
+					console.log('test to display');
+
+				} else if (score > the_leaderboard.names_scores[the_leaderboard.names_scores.length - 1].score) {
+					display_leaderboard()
+					console.log('testing to display');
+				}
+
+			} else {
+				document.getElementById("response").innerHTML= "I'm sorry, your score hasn't been saved."
+			}
+		}
+
+		// create a new row for the leaderboard that looks like <tr><td>player_name</td><td>player_score</td></tr>
+		function createLeaderBoardRow (name, score) {
+
+			const row = document.createElement("tr");
+
+			// the player name
+			const name_data = document.createElement("td");
+			name_data.innerHTML = name;
+			row.appendChild(name_data);
+
+			// the player score
+			const score_data = document.createElement("td");
+			score_data.innerHTML = score;
+			row.appendChild(score_data);
+
+			console.log('created leaderboard row');
+
+			return row;
+		}
+
+		async function display_leaderboard () {
+			const top_scores = document.getElementById("top_scores");
+
+			// remove all the names and scores from the body of the displayed leaderboard
+			while (top_scores.hasChildNodes()) {
+				top_scores.removeChild(top_scores.firstChild)
+			}
+
+			// and clear the numeric scores from the_leaderboard
+			the_leaderboard.scores = [];
+
+			// Use fetch() to run php and obtain the scores data
+			const names_scores_response = await fetch(`../php/top_n_names_scores.php?n=${the_leaderboard.max_entries}`)
+			{
+				method: 'GET'
+			}
+
+			if (names_scores_response.ok) {
+
+				// names_scores_response is an entire HTTP response, encoded as JSON
+				// .json() extracts the json body part of the HTTP response, and returns a JavaScript object that we can work with
+				const names_scores = await names_scores_response.json();
+				console.log('name_scores_response was ok');
+
+				// add a row to the leaderboard for each name and score
+				names_scores.forEach(
+						function (value) {
+
+							// each entry in names_scores is a string like '("name","score")'
+
+							const name_score = value.replace('(','')  // so we remove the (
+									.replace(')','')                // and the )
+									.split(",");                    // and split the remaining string into an array: ["name","score"]
+
+							// so name_score now looks like ["name", "score"]
+							// which we can use to create a new row for the displayed leaderboard
+							top_scores.appendChild(createLeaderBoardRow(name_score[0],name_score[1]));
+
+							// an in-memory array that represents the leaderboard
+							// in this code, only the scores are used
+							the_leaderboard.names_scores.push({name: name_score[0], score: parseInt(name_score[1])});
+
+						}) // end forEach
+			}
+		}
+
+		return {  // this object is assigned to random_leaderboard_namespace to make display_leaderboard etc. visible
+			display_leaderboard: display_leaderboard,
+			save_score: save_score
+		}
+	}()
+</script>
+</body>
+</html>
