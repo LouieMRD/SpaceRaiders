@@ -11,7 +11,7 @@
         */
 
         //'/aber/eds/PHP/cs25320_db_secrets.php';  // Faculty Linux, also central, central is /aber/eds
-        'db_secrets.php'; // Inf. services Windows, central is M:
+    'db_secrets.php'; // Inf. services Windows, central is M:
         //'/home/Edel/central_eds/PHP/cs25320_db_secrets.php'; // hp-enfys, central is mounted at /home/Edelcentral_eds
         //'C:\Users\edels\db_secrets.php';
     function get_db_connection() {
