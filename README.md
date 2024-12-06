@@ -3,8 +3,13 @@
 <p>In this game your goal is to shoot down incoming 
 spaceship (the falling blocks) to protect your planet
 from invasion. Additionally, there are also spaceships that are not loyal to the alien cause and will actually aid you in
-your prevention of their invasion by giving you a huge score increase.
+your prevention of their invasion by giving you a huge score increase. 
 </p>
+<br>
+<p>You can play the game here: https://users.aber.ac.uk/lom50/SpaceRaiders/cs25320-coursework/falling_stuff.html</p>
+
+
+
 
 <h2>How to Play</h2>
 
